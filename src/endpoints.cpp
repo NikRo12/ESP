@@ -42,7 +42,7 @@ static esp_err_t toggleLed(httpd_req_t* req, Application& app, Led& led) {
     return ESP_OK;
 }
 
-static esp_err_t lightRGB(httpd_req_t* req, Application& app, RGB& rgb) {
+static esp_err_t lightRGB(httpd_req_t* req, Application& app) {
     Server::setCorsHeaders(req);
     httpd_resp_set_type(req, "application/json");
 
@@ -80,10 +80,9 @@ static esp_err_t lightRGB(httpd_req_t* req, Application& app, RGB& rgb) {
         return ESP_FAIL;
     }
 
-    rgb.setColor(static_cast<uint8_t>(r),
-                 static_cast<uint8_t>(g),
-                 static_cast<uint8_t>(b));
-    app.markDirty();
+    app.setRgb(static_cast<uint8_t>(r),
+               static_cast<uint8_t>(g),
+               static_cast<uint8_t>(b));
     cJSON_Delete(root);
 
     char response[64];
@@ -125,7 +124,7 @@ esp_err_t endpoints::handleState(httpd_req_t* req) {
 
 esp_err_t endpoints::handleRGB(httpd_req_t* req) {
     Application* app = appFrom(req, __func__);
-    return app ? lightRGB(req, *app, app->rgb()) : ESP_FAIL;
+    return app ? lightRGB(req, *app) : ESP_FAIL;
 }
 
 esp_err_t endpoints::handleWebSocket(httpd_req_t* req) {

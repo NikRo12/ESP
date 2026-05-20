@@ -2,6 +2,7 @@
 #include "endpoints.hpp"
 #include <string>
 #include "cJSON.h"
+#include "esp_timer.h"
 
 Application::Application(uint16_t port, gpio_num_t led1Pin, gpio_num_t led2Pin,
                          gpio_num_t btn1Pin, gpio_num_t btn2Pin,
@@ -41,6 +42,19 @@ void Application::markDirty() {
     _dirty = true;
 }
 
+void Application::setRgb(uint8_t r, uint8_t g, uint8_t b) {
+    int64_t now = esp_timer_get_time() / 1000;
+    if (now - _lastRgbUpdate < RGB_THROTTLE_MS) {
+        _pendingR = r;
+        _pendingG = g;
+        _pendingB = b;
+        _hasPending = true;
+        return;
+    }
+    _lastRgbUpdate = now;
+    _rgb.setColor(r, g, b);
+}
+
 void Application::tick() {
     if (_btn1.pollPressed()) {
         _led1.toggle();
@@ -53,6 +67,13 @@ void Application::tick() {
 
     if (_pot.poll()) {
         markDirty();
+    }
+
+    int64_t now = esp_timer_get_time() / 1000;
+    if (_hasPending && (now - _lastRgbUpdate) >= RGB_THROTTLE_MS) {
+        _lastRgbUpdate = now;
+        _rgb.setColor(_pendingR, _pendingG, _pendingB);
+        _hasPending = false;
     }
 
     if (_dirty) {
